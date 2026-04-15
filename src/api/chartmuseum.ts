@@ -6,6 +6,9 @@ export type ChartRow = {
   version: string
   description: string
   created?: string
+  home?: string
+  digest?: string
+  urls?: string[]
 }
 
 function normalizeChartResponse(data: unknown): ChartRow[] {
@@ -25,6 +28,11 @@ function normalizeChartResponse(data: unknown): ChartRow[] {
         version: o.version,
         description: typeof o.description === 'string' ? o.description : '',
         created: typeof o.created === 'string' ? o.created : undefined,
+        home: typeof o.home === 'string' ? o.home : undefined,
+        digest: typeof o.digest === 'string' ? o.digest : undefined,
+        urls: Array.isArray(o.urls)
+          ? (o.urls as unknown[]).filter((u): u is string => typeof u === 'string')
+          : undefined,
       })
     }
   } else {
@@ -40,6 +48,11 @@ function normalizeChartResponse(data: unknown): ChartRow[] {
           version: o.version,
           description: typeof o.description === 'string' ? o.description : '',
           created: typeof o.created === 'string' ? o.created : undefined,
+          home: typeof o.home === 'string' ? o.home : undefined,
+          digest: typeof o.digest === 'string' ? o.digest : undefined,
+          urls: Array.isArray(o.urls)
+            ? (o.urls as unknown[]).filter((u): u is string => typeof u === 'string')
+            : undefined,
         })
       }
     }

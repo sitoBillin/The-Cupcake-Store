@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import "./App.css";
 import {
   deleteChartVersion,
@@ -89,6 +95,38 @@ function allowedRecentChartName(
   return allowed.some((a) => a.trim().toLowerCase() === n);
 }
 
+function DetailEyeIcon({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      className={
+        expanded ? "detail-eye-svg detail-eye-svg--expanded" : "detail-eye-svg"
+      }
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        className="detail-eye-lid"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+      />
+      <path
+        className="detail-eye-iris"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    </svg>
+  );
+}
+
 /** Por chart: versión más reciente por `created` y la inmediatamente anterior por fecha. */
 type ChartLatestSummary = {
   displayName: string;
@@ -156,6 +194,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ChartRow | null>(null);
   const [pageSize, setPageSize] = useState<PageSize>(10);
   const [page, setPage] = useState(1);
 
@@ -237,6 +277,31 @@ function App() {
     [rows],
   );
 
+  useEffect(() => {
+    setExpandedRowKey(null);
+  }, [page, pageSize, chartNameFilter, textFilter, sortKey, sortDir]);
+
+  useEffect(() => {
+    if (!pendingDelete) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setPendingDelete(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pendingDelete]);
+
+  useEffect(() => {
+    if (!pendingDelete) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [pendingDelete]);
+
   const onSortClick = (key: SortKey) => {
     if (key === sortKey) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -251,23 +316,30 @@ function App() {
     setTextFilter("");
   };
 
-  async function onDelete(row: ChartRow) {
-    const key = `${row.chartName}@${row.version}`;
-    const ok = window.confirm(
-      `¿Eliminar del ChartMuseum la versión "${row.version}" del chart "${row.chartName}"? Esta acción no se puede deshacer.`,
-    );
-    if (!ok) return;
+  function openDeleteModal(row: ChartRow) {
+    setPendingDelete(row);
+  }
 
+  async function confirmDeleteFromModal() {
+    if (!pendingDelete) return;
+    const row = pendingDelete;
+    const key = `${row.chartName}@${row.version}`;
     setDeletingKey(key);
     setError(null);
     try {
       await deleteChartVersion(row.chartName, row.version);
+      setPendingDelete(null);
+      setExpandedRowKey((k) => (k === key ? null : k));
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al eliminar");
     } finally {
       setDeletingKey(null);
     }
+  }
+
+  function toggleRowExpanded(key: string) {
+    setExpandedRowKey((k) => (k === key ? null : key));
   }
 
   const hasActiveFilters = Boolean(
@@ -356,25 +428,6 @@ function App() {
                     ? `Actualizando… · ${totalFiltered} de ${rows.length} versiones visibles`
                     : `${totalFiltered} de ${rows.length} versiones · ${chartOptions.length} charts`}
               </p>
-              <label className="field field-page-size">
-                <span className="field-label">Por página</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    const n = Number(e.target.value) as PageSize;
-                    setPageSize(n);
-                    setPage(1);
-                  }}
-                  disabled={loading && rows.length === 0}
-                  aria-label="Número de filas por página"
-                >
-                  {PAGE_SIZES.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
             {totalFiltered > 0 && (!loading || rows.length > 0) ? (
               <p className="meta meta-range" aria-live="polite">
@@ -424,8 +477,14 @@ function App() {
                     currentDir={sortDir}
                     onSort={onSortClick}
                   />
-                  <th scope="col" className="col-actions th-static">
-                    Acciones
+                  <th
+                    scope="col"
+                    className="col-expand th-static"
+                    aria-label="Ver detalle"
+                  >
+                    <span className="th-expand-icon-wrap" aria-hidden="true">
+                      <DetailEyeIcon expanded={false} />
+                    </span>
                   </th>
                 </tr>
               </thead>
@@ -446,61 +505,188 @@ function App() {
                 ) : null}
                 {pageRows.map((row) => {
                   const key = `${row.chartName}@${row.version}`;
+                  const expanded = expandedRowKey === key;
+                  const panelId = `chart-detail-${key.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
                   return (
-                    <tr key={key}>
-                      <td className="td-chart-name">{row.chartName}</td>
-                      <td className="td-version">
-                        <span className="table-version-badge mono">
-                          {row.version}
-                        </span>
-                      </td>
-                      <td className="muted td-created">
-                        {row.created ? formatFriendlyDate(row.created) : "—"}
-                      </td>
-                      <td className="col-actions">
-                        <button
-                          type="button"
-                          className="btn danger"
-                          disabled={deletingKey !== null}
-                          aria-busy={deletingKey === key}
-                          onClick={() => void onDelete(row)}
-                        >
-                          {deletingKey === key ? "Eliminando…" : "Eliminar"}
-                        </button>
-                      </td>
-                    </tr>
+                    <Fragment key={key}>
+                      <tr className={expanded ? "chart-row chart-row--open" : "chart-row"}>
+                        <td className="td-chart-name">{row.chartName}</td>
+                        <td className="td-version">
+                          <span className="table-version-badge mono">
+                            {row.version}
+                          </span>
+                        </td>
+                        <td className="muted td-created">
+                          {row.created ? formatFriendlyDate(row.created) : "—"}
+                        </td>
+                        <td className="td-expand">
+                          <button
+                            type="button"
+                            className="btn-expand"
+                            aria-expanded={expanded}
+                            aria-controls={panelId}
+                            onClick={() => toggleRowExpanded(key)}
+                          >
+                            <DetailEyeIcon expanded={expanded} />
+                            <span className="sr-only">
+                              {expanded
+                                ? "Ocultar detalle"
+                                : "Mostrar detalle y acciones"}
+                            </span>
+                          </button>
+                        </td>
+                      </tr>
+                      {expanded ? (
+                        <tr className="chart-row-detail">
+                          <td colSpan={4}>
+                            <div className="chart-detail-panel" id={panelId}>
+                              <div className="chart-detail-layout">
+                                <section className="chart-detail-section chart-detail-section--wide">
+                                  <h3 className="chart-detail-heading">
+                                    Descripción
+                                  </h3>
+                                  <p className="chart-detail-body">
+                                    {row.description?.trim()
+                                      ? row.description
+                                      : "Sin descripción en el índice."}
+                                  </p>
+                                </section>
+
+                                <div className="chart-detail-tiles">
+                                  {row.created ? (
+                                    <section className="chart-detail-section chart-detail-tile">
+                                      <h3 className="chart-detail-heading">
+                                        Publicado
+                                      </h3>
+                                      <p className="chart-detail-body chart-detail-body--emph">
+                                        {formatFriendlyDate(row.created)}
+                                      </p>
+                                      <p className="chart-detail-meta mono">
+                                        {row.created}
+                                      </p>
+                                    </section>
+                                  ) : null}
+                                  {row.home ? (
+                                    <section className="chart-detail-section chart-detail-tile">
+                                      <h3 className="chart-detail-heading">
+                                        Home
+                                      </h3>
+                                      <p className="chart-detail-body">
+                                        <a
+                                          href={row.home}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="chart-detail-link"
+                                        >
+                                          {row.home}
+                                        </a>
+                                      </p>
+                                    </section>
+                                  ) : null}
+                                  {row.digest ? (
+                                    <section className="chart-detail-section chart-detail-tile chart-detail-tile--digest">
+                                      <h3 className="chart-detail-heading">
+                                        Digest
+                                      </h3>
+                                      <p className="chart-detail-body mono chart-detail-digest">
+                                        {row.digest}
+                                      </p>
+                                    </section>
+                                  ) : null}
+                                </div>
+
+                                {row.urls && row.urls.length > 0 ? (
+                                  <section className="chart-detail-section chart-detail-section--wide">
+                                    <h3 className="chart-detail-heading">
+                                      URLs del paquete
+                                    </h3>
+                                    <ul className="chart-detail-url-list">
+                                      {row.urls.map((u) => (
+                                        <li key={u}>
+                                          <a
+                                            href={u}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="chart-detail-link"
+                                          >
+                                            {u}
+                                          </a>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </section>
+                                ) : null}
+                              </div>
+                              <div className="chart-detail-actions">
+                                <button
+                                  type="button"
+                                  className="btn danger"
+                                  disabled={deletingKey !== null}
+                                  onClick={() => openDeleteModal(row)}
+                                >
+                                  Eliminar esta versión…
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
                   );
                 })}
               </tbody>
             </table>
           </div>
 
-          {totalFiltered > 0 && totalPages > 1 ? (
+          <div className="pagination-bottom-row">
             <nav
-              className="pagination-nav"
+              className="pagination-nav pagination-nav--inline"
               aria-label="Paginación de resultados"
             >
-              <button
-                type="button"
-                className="btn secondary"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Anterior
-              </button>
-              <span className="pagination-status">
-                Página <strong>{page}</strong> de {totalPages}
-              </span>
-              <button
-                type="button"
-                className="btn secondary"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Siguiente
-              </button>
+              {totalFiltered > 0 && totalPages > 1 ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Anterior
+                  </button>
+                  <span className="pagination-status">
+                    Página <strong>{page}</strong> de {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    Siguiente
+                  </button>
+                </>
+              ) : null}
             </nav>
-          ) : null}
+            <label className="field field-inline field-page-size field-page-size-bottom">
+              <span className="field-label">Por página</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  const n = Number(e.target.value) as PageSize;
+                  setPageSize(n);
+                  setPage(1);
+                }}
+                disabled={loading && rows.length === 0}
+                aria-label="Número de filas por página"
+              >
+                {PAGE_SIZES.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
 
         <aside className="app-sidebar" aria-label="Publicaciones recientes">
@@ -575,6 +761,53 @@ function App() {
           </div>
         </aside>
       </div>
+
+      {pendingDelete ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => {
+            if (!deletingKey) setPendingDelete(null);
+          }}
+        >
+          <div
+            className="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="delete-modal-title" className="modal-title">
+              Confirmar eliminación
+            </h2>
+            <p className="modal-body">
+              Se eliminará del ChartMuseum la versión{" "}
+              <strong className="mono">{pendingDelete.version}</strong> del chart{" "}
+              <strong>{pendingDelete.chartName}</strong>. Esta acción no se puede
+              deshacer.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn secondary"
+                disabled={deletingKey !== null}
+                onClick={() => setPendingDelete(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn danger"
+                disabled={deletingKey !== null}
+                aria-busy={deletingKey !== null}
+                onClick={() => void confirmDeleteFromModal()}
+              >
+                {deletingKey !== null ? "Eliminando…" : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
