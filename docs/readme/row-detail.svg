@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="420" viewBox="0 0 880 420" role="img" aria-labelledby="t2">
+  <title id="t2">Fila expandida: panel de detalle con secciones y acción eliminar</title>
+  <defs>
+    <linearGradient id="gb" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef2ff"/>
+      <stop offset="1" stop-color="#e0e7ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="880" height="420" fill="#f1f5f9"/>
+  <text x="32" y="36" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#64748b">DETALLE AL PULSAR EL ICONO DE OJO</text>
+  <!-- row -->
+  <rect x="32" y="52" width="816" height="36" rx="8" fill="#ffffff" stroke="#2563eb" stroke-width="1.5"/>
+  <text x="48" y="75" font-family="system-ui,sans-serif" font-size="12" fill="#0f172a">TORTILLA</text>
+  <rect x="200" y="60" width="52" height="22" rx="6" fill="url(#gb)" stroke="#c7d2fe"/>
+  <text x="210" y="75" font-family="ui-monospace,monospace" font-size="10" fill="#312e81">1.2.3</text>
+  <text x="360" y="75" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Hoy · 14:02</text>
+  <ellipse cx="780" cy="70" rx="14" ry="9" fill="none" stroke="#2563eb" stroke-width="2"/>
+  <circle cx="780" cy="70" r="3.5" fill="#2563eb" stroke="#2563eb"/>
+  <!-- panel -->
+  <rect x="32" y="100" width="816" height="292" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+  <rect x="48" y="116" width="4" height="260" rx="2" fill="#2563eb"/>
+  <text x="64" y="138" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#64748b" letter-spacing="0.06em">DESCRIPCIÓN</text>
+  <text x="64" y="158" font-family="system-ui,sans-serif" font-size="11" fill="#334155">Helm chart para despliegue de la aplicación&</text>
+  <!-- tiles -->
+  <rect x="64" y="182" width="200" height="88" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="76" y="204" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#64748b">PUBLICADO</text>
+  <text x="76" y="228" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#0f172a">Hoy · 14:02</text>
+  <text x="76" y="248" font-family="ui-monospace,monospace" font-size="8" fill="#94a3b8">2026-04-15T12:02:00Z</text>
+  <rect x="280" y="182" width="200" height="88" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="292" y="204" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#64748b">HOME</text>
+  <text x="292" y="226" font-family="system-ui,sans-serif" font-size="10" fill="#2563eb">https://ejemplo.com/docs</text>
+  <rect x="496" y="182" width="336" height="88" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="508" y="204" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#64748b">DIGEST</text>
+  <text x="508" y="228" font-family="ui-monospace,monospace" font-size="9" fill="#475569">sha256:abc&def</text>
+  <!-- urls -->
+  <text x="64" y="298" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#64748b">URLS DEL PAQUETE</text>
+  <rect x="64" y="306" width="760" height="36" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="76" y="328" font-family="system-ui,sans-serif" font-size="10" fill="#2563eb">https://charts.example.com/&/tortilla-1.2.3.tgz</text>
+  <!-- delete -->
+  <rect x="64" y="354" width="168" height="32" rx="8" fill="#dc2626"/>
+  <text x="88" y="374" font-family="system-ui,sans-serif" font-size="11" font-weight="600" fill="#ffffff">Eliminar esta versión&</text>
+</svg>
