@@ -5,20 +5,58 @@
   font-weight: 400;
   color-scheme: light dark;
   color: #0f172a;
-  background-color: #f8fafc;
+  background-color: #f1f5f9;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
   --muted: #64748b;
+  --link: #2563eb;
+  --border: #e2e8f0;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --code-bg: #e2e8f033;
+  --btn-sec-bg: #ffffff;
+  --btn-sec-fg: #0f172a;
+  --btn-sec-hover: #f1f5f9;
+  --err-bg: #fef2f2;
+  --err-border: #fecaca;
+  --err-fg: #991b1b;
+  --danger-bg: #dc2626;
+  --danger-fg: #ffffff;
+  --th-sort-hover: #e2e8f055;
+  --header-bg: #ffffffaa;
+  --header-border: #e2e8f0;
+  --version-badge-bg: linear-gradient(160deg, #eef2ff 0%, #e0e7ff 100%);
+  --version-badge-fg: #312e81;
+  --version-badge-border: #c7d2fe;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color: #e2e8f0;
-    background-color: #0b1220;
+    background-color: #0f172a;
     --muted: #94a3b8;
+    --link: #60a5fa;
+    --border: #334155;
+    --surface: #1e293b;
+    --surface-2: #0f172a;
+    --code-bg: #33415566;
+    --btn-sec-bg: #1e293b;
+    --btn-sec-fg: #e2e8f0;
+    --btn-sec-hover: #334155;
+    --err-bg: #450a0a66;
+    --err-border: #7f1d1d;
+    --err-fg: #fecaca;
+    --danger-bg: #b91c1c;
+    --danger-fg: #fef2f2;
+    --th-sort-hover: #33415599;
+    --header-bg: #1e293bcc;
+    --header-border: #334155;
+    --version-badge-bg: linear-gradient(165deg, #4338ca 0%, #312e81 100%);
+    --version-badge-fg: #eef2ff;
+    --version-badge-border: #6366f1;
   }
 }
 
