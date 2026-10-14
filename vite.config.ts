@@ -2,6 +2,10 @@ import http from 'node:http'
 import https from 'node:https'
 import { defineConfig, loadEnv, type ProxyOptions } from 'vite'
 import react from '@vitejs/plugin-react'
+import {
+  CHARTMUSEUM_DOTENV_KEYS,
+  readChartmuseumEnvStrings,
+} from './src/env/chartmuseumEnvNames.ts'
 
 /** Evita ECONNREFUSED en algunos equipos donde `localhost` prioriza IPv6 (::1) y el servidor solo escucha en IPv4. */
 function outboundAgentForTarget(target: string) {
@@ -10,15 +14,34 @@ function outboundAgentForTarget(target: string) {
     : new http.Agent({ family: 4 })
 }
 
+/** Evita doble `/api` si alguien pone `…/api` como base (ChartMuseum expone `…/api/charts`). */
+function normalizeChartmuseumBaseUrlForProxy(raw: string): string {
+  let base = raw.trim().replace(/\/+$/, '')
+  if (/\/api$/i.test(base)) {
+    console.warn(
+      `[vite ChartMuseum] ${CHARTMUSEUM_DOTENV_KEYS.baseUrl} terminaba en /api; se eliminó ese sufijo (el proxy ya pide /api/charts).`,
+    )
+    base = base.replace(/\/api$/i, '')
+  }
+  return base.replace(/\/+$/, '')
+}
+
+function joinUrlForLog(origin: string, reqPath: string): string {
+  const o = origin.replace(/\/+$/, '')
+  const p = reqPath.startsWith('/') ? reqPath : `/${reqPath}`
+  return o + p
+}
+
 function chartmuseumProxyConfig(env: Record<string, string>): Record<string, ProxyOptions> {
-  const baseUrl = (env.CHARTMUSEUM_BASE_URL ?? '').replace(/\/$/, '')
+  const cm = readChartmuseumEnvStrings(env)
+  const baseUrl = normalizeChartmuseumBaseUrlForProxy(cm.baseUrl)
   if (!baseUrl) {
     return {}
   }
 
-  const user = env.CHARTMUSEUM_USER ?? ''
-  const password = env.CHARTMUSEUM_PASSWORD ?? ''
-  const repoPath = (env.CHARTMUSEUM_REPO_PATH ?? '').replace(/^\/+|\/+$/g, '')
+  const user = cm.user
+  const password = cm.password
+  const repoPath = cm.repoPath.replace(/^\/+|\/+$/g, '')
 
   const authHeader =
     user || password
@@ -34,6 +57,7 @@ function chartmuseumProxyConfig(env: Record<string, string>): Record<string, Pro
   }
 
   const agent = outboundAgentForTarget(baseUrl)
+  let loggedFirstProxy = false
 
   return {
     '/chartmuseum': {
@@ -46,6 +70,15 @@ function chartmuseumProxyConfig(env: Record<string, string>): Record<string, Pro
           if (authHeader) {
             proxyReq.setHeader('Authorization', authHeader)
           }
+          if (!loggedFirstProxy) {
+            loggedFirstProxy = true
+            const path = proxyReq.path ?? ''
+            const resolved = joinUrlForLog(baseUrl, path)
+            console.info(`[vite ChartMuseum] proxy → ${resolved}`)
+            console.info(
+              `[vite ChartMuseum] comprueba JSON: curl -sS -u 'USER:PASS' '${joinUrlForLog(baseUrl, '/api/charts')}' | head -c 120`,
+            )
+          }
         })
         proxy.on('error', (err) => {
           const msg = err instanceof Error ? err.message : String(err)
@@ -53,7 +86,7 @@ function chartmuseumProxyConfig(env: Record<string, string>): Record<string, Pro
             `\n[vite ChartMuseum proxy] ${msg}`,
             `\n  Destino configurado: ${baseUrl}`,
             `\n  ¿ChartMuseum en marcha y puerto correcto? Prueba curl "${baseUrl}/health".`,
-            `\n  Si sigue fallando con localhost, usa 127.0.0.1 en CHARTMUSEUM_BASE_URL.\n`,
+            `\n  Si sigue fallando con localhost, prueba 127.0.0.1 en ${CHARTMUSEUM_DOTENV_KEYS.baseUrl}.\n`,
           )
         })
       },

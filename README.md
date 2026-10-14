@@ -14,7 +14,7 @@ Tabla de versiones con filtro por chart, detalle expandido (descripción, public
 
 ## Requisitos
 
-- Node.js **20** (`.nvmrc`)
+- Node.js **24.22.0** (`.nvmrc`), última LTS de la serie 24
 
 ## Comandos
 
@@ -31,13 +31,19 @@ npm run dev
 
 ## Configuración
 
-Copia `.env.example` a `.env` y define al menos `CHARTMUSEUM_BASE_URL`. Usuario y contraseña de Basic Auth van en el `.env`; Vite las aplica en el **proxy** (`/chartmuseum` → tu museo), no en el bundle del navegador.
+La app llama a **`/chartmuseum/api/...`** en el mismo origen; en **`npm run dev`** y **`npm run preview`**, Vite hace de **proxy** hacia `CHARTMUSEUM_BASE_URL` e inyecta Basic Auth desde el `.env` (las credenciales no van al bundle del navegador).
+
+Copia [`.env.example`](./.env.example) a `.env` y ajusta los valores:
 
 | Variable | Descripción |
 | -------- | ----------- |
 | `PORT` | Puerto de dev/preview (opcional; por defecto 5173) |
-| `CHARTMUSEUM_BASE_URL` | URL del museo, sin barra final |
+| `CHARTMUSEUM_BASE_URL` | Origen del ChartMuseum **sin** barra final y **sin** `/api` (el proxy ya usa `/api/charts`) |
 | `CHARTMUSEUM_USER` / `CHARTMUSEUM_PASSWORD` | Basic Auth (opcional) |
 | `CHARTMUSEUM_REPO_PATH` | Multitenancy: ruta tras `/api` (opcional) |
 
-En producción con solo estáticos hace falta un proxy similar si el museo exige autenticación. Si falla la conexión con `localhost`, prueba `127.0.0.1` en la URL base.
+Si falla la conexión con `localhost`, prueba `127.0.0.1` en la URL base.
+
+**HTML en lugar de JSON:** revisa que la URL base apunte al ChartMuseum; en la terminal de `npm run dev` verás `[vite ChartMuseum] proxy → …`. Comprueba con `curl -sS -u 'USER:PASS' 'TU_URL/api/charts' | head -c 120` (debe ser JSON).
+
+En un despliegue **solo estático** (sin servidor Vite) hará falta un **proxy inverso** equivalente que reescriba `/chartmuseum` hacia el museo y añada la autenticación.
