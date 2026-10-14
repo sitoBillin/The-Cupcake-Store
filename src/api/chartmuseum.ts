@@ -1,6 +1,6 @@
 import { CHARTMUSEUM_DOTENV_KEYS } from "../env/chartmuseumEnvNames";
 
-/** Ruta relativa: el servidor Vite hace de proxy y añade Basic Auth (ver vite.config.ts). */
+/** Ruta relativa: en local hace de proxy Vite (vite.config.ts); desplegado, server/server.mjs. */
 const PROXY_PREFIX = "/chartmuseum";
 
 export type ChartRow = {
@@ -75,8 +75,22 @@ function bodyLooksLikeHtml(text: string): boolean {
   return s.startsWith("<!doctype") || s.startsWith("<html");
 }
 
+/** El servidor de producción (server/server.mjs) responde así cuando no hay sesión de Google. */
+function redirectToLoginIfUnauthenticated(res: Response, text: string): void {
+  if (res.status !== 401) return;
+  try {
+    if ((JSON.parse(text) as { error?: unknown }).error === "unauthenticated") {
+      const next = window.location.pathname + window.location.search;
+      window.location.assign(`/auth/login?next=${encodeURIComponent(next)}`);
+    }
+  } catch {
+    // 401 de ChartMuseum (basic auth), no del servidor de Cupcake.
+  }
+}
+
 async function parseChartmuseumChartsJson(res: Response): Promise<unknown> {
   const text = await res.text();
+  redirectToLoginIfUnauthenticated(res, text);
   if (bodyLooksLikeHtml(text)) {
     throw new Error(
       `El servidor devolvió HTML en lugar del JSON del índice (/api/charts). Comprueba ${CHARTMUSEUM_DOTENV_KEYS.baseUrl}, ${CHARTMUSEUM_DOTENV_KEYS.user} y ${CHARTMUSEUM_DOTENV_KEYS.password} en .env (sin /api al final en la URL base).`,
@@ -115,6 +129,7 @@ export async function deleteChartVersion(
   const path = `${PROXY_PREFIX}/api/charts/${encodeURIComponent(chartName)}/${encodeURIComponent(version)}`;
   const res = await fetch(path, { method: "DELETE" });
   const text = await res.text();
+  redirectToLoginIfUnauthenticated(res, text);
   if (!res.ok) {
     if (bodyLooksLikeHtml(text)) {
       throw new Error(

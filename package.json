@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node --env-file-if-exists=.env server/server.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
